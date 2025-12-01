@@ -353,7 +353,7 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
           {gameState === 'REKT' && !showLeaderboard && (
             <div className="pointer-events-auto bg-[#111827]/95 w-full max-w-sm rounded-3xl backdrop-blur-xl border border-red-500/50 shadow-2xl p-6 text-center transform transition-all duration-300 scale-100">
               <h2 className="text-4xl font-black text-red-500 drop-shadow-lg tracking-tighter uppercase mb-2">LIQUIDATED</h2>
-              <p className="text-xs text-gray-400 mb-6">You got rekt.</p>
+              <p className="text-xs text-gray-400 mb-6">Don't give up, anon.</p>
               
               <div className="bg-black/40 py-3 px-4 rounded-2xl border border-white/5 inline-block mb-6 w-full">
                 <span className="text-[10px] font-bold uppercase text-gray-500 block mb-1 tracking-widest">Final Portfolio</span>
