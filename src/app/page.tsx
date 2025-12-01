@@ -1,65 +1,166 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect } from 'react';
+import { sdk } from '@farcaster/miniapp-sdk';
+import { useReadContract, useAccount, useConnect } from 'wagmi';
+import { injected } from 'wagmi/connectors';
+import { parseAbi } from 'viem';
+import WarpletGame from '../components/WarpletGame';
+
+// Warplets Contract (Base)
+const CONTRACT_ADDRESS = '0x699727f9e01a822efdcf7333073f0461e5914b4e';
+
+// Expanded ABI to check Ownership
+const ABI = parseAbi([
+  'function tokenURI(uint256 tokenId) view returns (string)',
+  'function ownerOf(uint256 tokenId) view returns (address)',
+]);
+
+const toGateway = (url: string) => {
+  if (!url) return '';
+  return url.replace('ipfs://', 'https://ipfs.io/ipfs/');
+};
 
 export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+  const [userData, setUserData] = useState<{ fid: number; username: string; pfpUrl: string } | null>(null);
+  const [imageUrl, setImageUrl] = useState<string>('');
+  
+  // Wallet State
+  const { address, isConnected } = useAccount();
+  const { connect } = useConnect();
+
+  // 1. Initialize Farcaster SDK
+  useEffect(() => {
+    const init = async () => {
+      const context = await sdk.context;
+      if (context?.user?.fid) {
+        setUserData({
+          fid: context.user.fid,
+          username: context.user.username || 'Warplet',
+          pfpUrl: context.user.pfpUrl || '',
+        });
+      }
+      sdk.actions.ready();
+    };
+    init();
+  }, []);
+
+  // 2. Check Ownership & Get Image
+  // We check who owns the Token ID corresponding to the user's FID
+  const { data: ownerAddress, isLoading: checkingOwner } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: ABI,
+    functionName: 'ownerOf',
+    args: userData ? [BigInt(userData.fid)] : undefined,
+    query: { enabled: !!userData },
+  });
+
+  const { data: tokenUri } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: ABI,
+    functionName: 'tokenURI',
+    args: userData ? [BigInt(userData.fid)] : undefined,
+    query: { enabled: !!userData },
+  });
+
+  // 3. Resolve Metadata
+  useEffect(() => {
+    if (tokenUri) {
+      const fetchImage = async () => {
+        try {
+          const res = await fetch(toGateway(tokenUri));
+          const json = await res.json();
+          if (json.image) setImageUrl(toGateway(json.image));
+        } catch (e) {
+          console.error("Metadata error", e);
+        }
+      };
+      fetchImage();
+    }
+  }, [tokenUri]);
+
+  // --- RENDERING STATES ---
+
+  // A. Loading Farcaster Context
+  if (!userData) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#0f0518] text-white">
+        <div className="text-center animate-pulse">
+          <h2 className="text-xl font-bold text-[#855DCD]">Connecting to Farcaster...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  // B. Wallet Not Connected
+  if (!isConnected) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-[#0f0518] text-white p-6 text-center">
+        <img src={userData.pfpUrl} className="w-20 h-20 rounded-full border-4 border-[#855DCD] mb-4" />
+        <h1 className="text-2xl font-black mb-2">Welcome, @{userData.username}</h1>
+        <p className="text-gray-400 mb-8 max-w-xs">
+          Connect your wallet to verify ownership of Warplet #{userData.fid}.
+        </p>
+        <button
+          onClick={() => connect({ connector: injected() })}
+          className="bg-[#855DCD] hover:bg-[#6d46b0] text-white font-bold py-4 px-8 rounded-xl shadow-[0_0_20px_rgba(133,93,205,0.4)] transition transform active:scale-95"
+        >
+          Connect Wallet
+        </button>
+      </div>
+    );
+  }
+
+  // C. Checking Ownership (Loading)
+  if (checkingOwner) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#0f0518] text-white">
+        <p className="text-[#855DCD] animate-bounce font-mono">Verifying Ownership...</p>
+      </div>
+    );
+  }
+
+  // D. Access Denied (Wallet doesn't own the Warplet)
+  // We compare the connected wallet (address) vs the contract owner (ownerAddress)
+  if (ownerAddress && address && ownerAddress.toLowerCase() !== address.toLowerCase()) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-[#0f0518] text-white p-6 text-center">
+        <div className="bg-red-500/10 p-6 rounded-2xl border border-red-500/50 max-w-sm">
+          <h2 className="text-3xl font-black text-red-500 mb-2">ACCESS DENIED</h2>
+          <p className="text-gray-300 mb-4">
+            Your connected wallet does not hold Warplet <b>#{userData.fid}</b>.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+          
+          <div className="bg-black/40 p-3 rounded-lg mb-4 text-xs font-mono text-left break-all">
+            <div className="text-gray-500">Required Owner:</div>
+            <div className="text-green-400 mb-2">{ownerAddress}</div>
+            <div className="text-gray-500">You Connected:</div>
+            <div className="text-red-400">{address}</div>
+          </div>
+
+          <a 
+            href={`https://opensea.io/assets/base/${CONTRACT_ADDRESS}/${userData.fid}`}
             target="_blank"
             rel="noopener noreferrer"
+            className="block w-full bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
+            View on OpenSea
           </a>
         </div>
-      </main>
-    </div>
-  );
+      </div>
+    );
+  }
+
+  // E. Token Doesn't Exist (Minted out or Invalid)
+  if (!ownerAddress) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-[#0f0518] text-white p-6 text-center">
+        <h2 className="text-2xl font-bold mb-2">Warplet #{userData.fid} not found</h2>
+        <p className="text-gray-400">It seems this Warplet has not been minted yet.</p>
+      </div>
+    );
+  }
+
+  // F. Success - Render Game
+  return <WarpletGame imageUrl={imageUrl} user={userData} />;
 }
