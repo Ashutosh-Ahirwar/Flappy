@@ -86,14 +86,7 @@ function MemeBackground({ score }: { score: number }) {
 
 // --- GAME LOGIC ---
 
-function GameScene({ 
-  imageUrl, 
-  gameState, 
-  setGameState, 
-  score, 
-  setScore 
-}: any) {
-  
+function GameScene({ imageUrl, gameState, setGameState, score, setScore }: any) {
   const playerPos = useRef(new THREE.Vector3(PLAYER_X_OFFSET, 0, 0));
   const velocity = useRef(0);
   const rotation = useRef(0);
@@ -194,7 +187,6 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
   
   const { sendTransaction } = useSendTransaction();
 
-  // Load Leaderboard on Mount
   useEffect(() => {
     const init = async () => {
       const context = await sdk.context;
@@ -228,7 +220,6 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
           pfpUrl: user.pfpUrl
         })
       });
-      // Refresh leaderboard after saving
       fetchLeaderboard();
     } catch (e) {
       console.error("Failed to save score", e);
@@ -249,7 +240,6 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
     });
   };
 
-  // Trigger Save on Game Over
   useEffect(() => {
     if (gameState === 'REKT') {
       saveScore(score);
@@ -259,42 +249,30 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
 
   return (
     <div className="w-full h-screen relative cursor-pointer select-none overflow-hidden bg-[#0f0518] font-sans text-white">
-      
-      {/* 3D SCENE */}
       <Canvas camera={{ position: [0, 0, VIEW_DISTANCE], fov: 45 }}>
         <GameScene 
           imageUrl={imageUrl} 
           gameState={gameState} 
-          setGameState={setGameState} 
+          setGameState={(state: any) => {
+            setGameState(state);
+            if (state === 'REKT') setShowLeaderboard(true); 
+          }} 
           score={score} 
           setScore={setScore} 
         />
       </Canvas>
       
-      {/* TAP AREA */}
-      <div 
-        className="absolute inset-0 z-10" 
-        onClick={() => window.dispatchEvent(new Event('game-tap'))}
-      />
+      <div className="absolute inset-0 z-10" onClick={() => window.dispatchEvent(new Event('game-tap'))} />
       
-      {/* HUD & UI */}
-      <div 
-        className="absolute inset-0 z-20 pointer-events-none flex flex-col"
-        style={{ 
-          paddingTop: Math.max(safeArea.top, 16), 
-          paddingBottom: Math.max(safeArea.bottom, 20),
-        }}
+      <div className="absolute inset-0 z-20 pointer-events-none flex flex-col"
+        style={{ paddingTop: Math.max(safeArea.top, 16), paddingBottom: Math.max(safeArea.bottom, 20) }}
       >
-        {/* TOP BAR */}
         <div className="flex justify-between items-start px-4 w-full">
-          {/* Score */}
           <div className="drop-shadow-md">
              <span className="font-black text-4xl font-mono tracking-tighter" style={{ textShadow: '0 0 10px #855DCD' }}>
                {score} ETH
              </span>
           </div>
-
-          {/* Persistent Buttons */}
           <div className="flex gap-2 pointer-events-auto">
             <button 
               onClick={(e) => { e.stopPropagation(); setShowLeaderboard(!showLeaderboard); }}
@@ -311,10 +289,7 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
           </div>
         </div>
 
-        {/* CENTER CONTENT */}
         <div className="flex-1 flex items-center justify-center p-4">
-          
-          {/* Start Screen */}
           {gameState === 'START' && !showLeaderboard && (
             <div className="text-center animate-pulse bg-black/40 p-6 rounded-2xl backdrop-blur-sm border border-white/5">
               <h2 className="text-2xl font-black tracking-widest text-[#855DCD]">TAP TO FLY</h2>
@@ -325,11 +300,8 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
             </div>
           )}
 
-          {/* Leaderboard / Game Over Modal */}
           {showLeaderboard && (
             <div className="pointer-events-auto bg-[#111827]/95 w-full max-w-sm rounded-3xl backdrop-blur-xl border border-[#855DCD]/30 shadow-2xl flex flex-col overflow-hidden max-h-[70vh]">
-              
-              {/* Header */}
               <div className="p-5 text-center border-b border-white/10 bg-gradient-to-b from-[#855DCD]/20 to-transparent">
                 {gameState === 'REKT' ? (
                   <>
@@ -341,10 +313,7 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
                 )}
               </div>
 
-              {/* List Area */}
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                
-                {/* Global Scores */}
                 {globalScores.length > 0 ? (
                   globalScores.map((u, i) => (
                     <div key={u.fid} className="flex items-center justify-between p-2 rounded-lg bg-white/5">
@@ -362,7 +331,6 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
                   </div>
                 )}
 
-                {/* CURRENT USER */}
                 <div className="flex items-center justify-between p-3 rounded-xl bg-[#855DCD] text-white shadow-lg transform scale-105 border border-white/20 mt-2">
                   <div className="flex items-center gap-3">
                     <span className="font-mono w-4 text-xs opacity-70">★</span>
@@ -376,7 +344,6 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
                 </div>
               </div>
 
-              {/* Footer Actions */}
               <div className="p-4 bg-black/40 border-t border-white/10 grid grid-cols-2 gap-3">
                 <button 
                   onClick={(e) => { e.stopPropagation(); setShowLeaderboard(false); setGameState('START'); }} 
