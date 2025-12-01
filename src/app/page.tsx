@@ -2,20 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk';
-import { useReadContract, useAccount, useConnect } from 'wagmi';
+import { useReadContract, useAccount, useConnect, useConnectors } from 'wagmi'; // Added useConnectors
 import { parseAbi } from 'viem';
 import WarpletGame from '../components/WarpletGame';
 
 // Warplets Contract (Base)
 const CONTRACT_ADDRESS = '0x699727f9e01a822efdcf7333073f0461e5914b4e';
 
-// ABI to check Ownership & Get Image
+// Expanded ABI to check Ownership
 const ABI = parseAbi([
   'function tokenURI(uint256 tokenId) view returns (string)',
   'function ownerOf(uint256 tokenId) view returns (address)',
 ]);
 
-// Helper to fix IPFS links
 const toGateway = (url: string) => {
   if (!url) return '';
   return url.replace('ipfs://', 'https://ipfs.io/ipfs/');
@@ -27,9 +26,10 @@ export default function Home() {
   
   // Wallet Hooks
   const { address, isConnected } = useAccount();
-  const { connect, connectors } = useConnect();
+  const { connect } = useConnect(); // Only get 'connect' from here
+  const connectors = useConnectors(); // Get 'connectors' from here
 
-  // 1. Initialize Farcaster SDK & Get Context
+  // 1. Initialize Farcaster SDK
   useEffect(() => {
     const init = async () => {
       const context = await sdk.context;
@@ -45,7 +45,7 @@ export default function Home() {
     init();
   }, []);
 
-  // 2. READ CONTRACT: Who owns the token with ID = FID?
+  // 2. Check Ownership
   const { data: ownerAddress, isLoading: checkingOwner } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: ABI,
@@ -54,7 +54,7 @@ export default function Home() {
     query: { enabled: !!userData },
   });
 
-  // 3. READ CONTRACT: Get the image for that token
+  // 3. Get Metadata
   const { data: tokenUri } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: ABI,
@@ -63,7 +63,7 @@ export default function Home() {
     query: { enabled: !!userData },
   });
 
-  // 4. Fetch Image Metadata
+  // 4. Resolve Image
   useEffect(() => {
     if (tokenUri) {
       const fetchImage = async () => {
@@ -79,42 +79,43 @@ export default function Home() {
     }
   }, [tokenUri]);
 
-  // --- HANDLERS ---
+  // --- CONNECT HANDLER ---
   const handleConnect = () => {
-    // Use the custom 'farcaster' connector we built earlier
     const farcasterConnector = connectors.find((c) => c.id === 'farcaster');
     if (farcasterConnector) {
       connect({ connector: farcasterConnector });
     } else {
-      // Fallback mostly for local testing
+      // Fallback for local testing if Farcaster connector isn't found
       const firstAvailable = connectors[0];
       if (firstAvailable) connect({ connector: firstAvailable });
     }
   };
 
-  // --- RENDER STATES ---
+  // --- RENDERING ---
 
-  // State 1: Loading Farcaster User
+  // A. Loading User
   if (!userData) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#0f0518] text-white">
-        <p className="animate-pulse text-[#855DCD] font-mono">Initializing...</p>
+        <div className="text-center animate-pulse">
+          <h2 className="text-xl font-bold text-[#855DCD]">Identifying...</h2>
+        </div>
       </div>
     );
   }
 
-  // State 2: Wallet Not Connected
+  // B. Wallet Not Connected
   if (!isConnected) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#0f0518] text-white p-6 text-center font-sans">
-        <img src={userData.pfpUrl} className="w-20 h-20 rounded-full border-4 border-[#855DCD] mb-4 shadow-[0_0_20px_#855DCD]" />
+      <div className="flex h-screen flex-col items-center justify-center bg-[#0f0518] text-white p-6 text-center">
+        <img src={userData.pfpUrl} className="w-20 h-20 rounded-full border-4 border-[#855DCD] mb-4" />
         <h1 className="text-2xl font-black mb-2">Welcome, @{userData.username}</h1>
         <p className="text-gray-400 mb-8 max-w-xs text-sm">
-          Connect your wallet to verify ownership of Warplet #{userData.fid}.
+          Connect your wallet to play with Warplet #{userData.fid}.
         </p>
         <button
           onClick={handleConnect}
-          className="bg-[#855DCD] hover:bg-[#6d46b0] text-white font-bold py-4 px-8 rounded-xl shadow-lg transition active:scale-95"
+          className="bg-[#855DCD] hover:bg-[#6d46b0] text-white font-bold py-4 px-8 rounded-xl shadow-[0_0_20px_rgba(133,93,205,0.4)] transition transform active:scale-95"
         >
           Connect Wallet
         </button>
@@ -122,7 +123,7 @@ export default function Home() {
     );
   }
 
-  // State 3: Checking Blockchain (Loading)
+  // C. Checking Ownership
   if (checkingOwner) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#0f0518] text-white">
@@ -131,11 +132,10 @@ export default function Home() {
     );
   }
 
-  // State 4: Access Denied (Wallet doesn't match Owner)
-  // We compare the connected 'address' vs the contract 'ownerAddress'
+  // D. Access Denied
   if (ownerAddress && address && ownerAddress.toLowerCase() !== address.toLowerCase()) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#0f0518] text-white p-6 text-center font-sans">
+      <div className="flex h-screen flex-col items-center justify-center bg-[#0f0518] text-white p-6 text-center">
         <div className="bg-red-500/10 p-6 rounded-2xl border border-red-500/50 max-w-sm">
           <h2 className="text-3xl font-black text-red-500 mb-2">ACCESS DENIED</h2>
           <p className="text-gray-300 mb-4 text-sm">
@@ -162,27 +162,18 @@ export default function Home() {
     );
   }
 
-  // State 5: Token Doesn't Exist (Not Minted)
+  // E. Token Not Minted
   if (!ownerAddress) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-[#0f0518] text-white p-6 text-center font-sans">
+      <div className="flex h-screen flex-col items-center justify-center bg-[#0f0518] text-white p-6 text-center">
         <h2 className="text-2xl font-bold mb-2 text-gray-300">Warplet #{userData.fid} Not Found</h2>
-        <p className="text-gray-500 text-sm max-w-xs mb-6">
+        <p className="text-gray-500 text-sm max-w-xs">
           It seems this Warplet has not been minted yet.
         </p>
-        <a 
-            href={`https://opensea.io/collection/warplets`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-[#855DCD] text-white font-bold py-3 px-6 rounded-xl"
-          >
-            Check Collection
-        </a>
       </div>
     );
   }
 
-  // State 6: Success! (User owns the token)
-  // We pass the fetched imageUrl so the game uses their specific NFT
+  // F. Success
   return <WarpletGame imageUrl={imageUrl} user={userData} />;
 }
