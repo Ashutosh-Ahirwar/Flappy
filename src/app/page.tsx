@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk';
-import { useReadContract, useAccount, useConnect, useConnectors } from 'wagmi'; // Added useConnectors
+import { useReadContract, useConnection, useConnect, useConnectors } from 'wagmi'; // Changed useAccount -> useConnection
 import { parseAbi } from 'viem';
 import WarpletGame from '../components/WarpletGame';
 
@@ -24,10 +24,10 @@ export default function Home() {
   const [userData, setUserData] = useState<{ fid: number; username: string; pfpUrl: string } | null>(null);
   const [imageUrl, setImageUrl] = useState<string>('');
   
-  // Wallet Hooks
-  const { address, isConnected } = useAccount();
-  const { connect } = useConnect(); // Only get 'connect' from here
-  const connectors = useConnectors(); // Get 'connectors' from here
+  // Wallet Hooks (Wagmi v3)
+  const { address, isConnected } = useConnection(); // Replaces useAccount
+  const { connect } = useConnect();
+  const connectors = useConnectors(); 
 
   // 1. Initialize Farcaster SDK
   useEffect(() => {
@@ -85,7 +85,6 @@ export default function Home() {
     if (farcasterConnector) {
       connect({ connector: farcasterConnector });
     } else {
-      // Fallback for local testing if Farcaster connector isn't found
       const firstAvailable = connectors[0];
       if (firstAvailable) connect({ connector: firstAvailable });
     }
