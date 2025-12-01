@@ -1,0 +1,43 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjEzNzEyODgsInR5cGUiOiJhdXRoIiwia2V5IjoiMHg4NGM0N0JDNDBhNDY4MGI5QjFjM2I2YUY3ZkZjYjg4ODhkYzBEMzU3In0",
+    "payload": "eyJkb21haW4iOiJmbGFwcHktZHVuLnZlcmNlbC5hcHAifQ",
+    "signature": "JyYdfBXiLgu7jw0/XsxjAcdBXRX5hUmkTMSLMRxIOZAJcamUhuFMVEiXu7hn57Qkk/Nw5FBjq/q1+cf2g6zULRw="
+  },
+  "baseBuilder": {
+    "ownerAddress": "0xd505989c1d95dEfcaE778475D494F5f51776Fe46"
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "Flappy Warplet",
+    "iconUrl": "https://flappy-dun.vercel.app/icon.png",
+    "homeUrl": "https://flappy-dun.vercel.app",
+    "imageUrl": "https://flappy-dun.vercel.app/hero.png",
+    "buttonTitle": "Play Flappy Warplet",
+    "splashImageUrl": "https://flappy-dun.vercel.app/splash.png",
+    "splashBackgroundColor": "#0f0518",
+    "webhookUrl": "https://flappy-dun.vercel.app/api/webhook",
+    "subtitle": "Dodge the candles!",
+    "description": "Guide your Warplet through the volatile charts. Tap to fly, dodge the candles, and set a new high score.",
+    "screenshotUrls": [
+      "https://flappy-dun.vercel.app/screenshot1.png"
+    ],
+    "primaryCategory": "games",
+    "tags": [
+      "game",
+      "crypto",
+      "flappy",
+      "warplet"
+    ],
+    "heroImageUrl": "https://flappy-dun.vercel.app/hero.png",
+    "tagline": "Tap to Pump It",
+    "ogTitle": "Flappy Warplet",
+    "ogDescription": "Navigate the volatile charts, dodge candles, and avoid getting REKT.",
+    "ogImageUrl": "https://flappy-dun.vercel.app/hero.png",
+    "noindex": false,
+    "requiredCapabilities": [
+      "wallet.getEthereumProvider",
+      "actions.composeCast"
+    ]
+  }
+}
