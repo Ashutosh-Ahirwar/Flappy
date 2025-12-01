@@ -67,7 +67,7 @@ export async function GET(request: Request) {
             textShadow: '0 4px 20px rgba(0,0,0,0.8)',
           }}>
             <div style={{ display: 'flex', fontSize: 70, color: 'white', marginBottom: 10, fontWeight: 900, letterSpacing: '-2px', textTransform: 'uppercase' }}>
-              WARP FLAP
+              Flappy Warplet
             </div>
             <div style={{ display: 'flex', fontSize: 30, color: '#d1d5db', marginBottom: 5, letterSpacing: '4px', textTransform: 'uppercase' }}>
               GAME SCORE

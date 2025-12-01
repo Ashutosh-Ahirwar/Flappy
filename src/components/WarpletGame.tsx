@@ -256,7 +256,8 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
   const handleShare = () => {
     const shareUrl = `https://flappy-dun.vercel.app?score=${score}`;
     sdk.actions.composeCast({
-      text: `I just scored ${score} ETH on Warp Flap with Warplet #${user.fid}! 🚀\n\nCan you beat me?`,
+      // UPDATED: Correct name
+      text: `I just scored ${score} ETH on Flappy Warplet with Warplet #${user.fid}! 🚀\n\nCan you beat me?`,
       embeds: [shareUrl] 
     });
   };
@@ -264,7 +265,7 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
   useEffect(() => {
     if (gameState === 'REKT') {
       saveScore(score);
-      setShowLeaderboard(false); // DO NOT auto-show leaderboard on death
+      setShowLeaderboard(true);
     }
   }, [gameState]);
 
@@ -276,7 +277,7 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
           gameState={gameState} 
           setGameState={(state: any) => {
             setGameState(state);
-            if (state === 'REKT') setShowLeaderboard(false); 
+            if (state === 'REKT') setShowLeaderboard(true); 
           }} 
           score={score} 
           setScore={setScore} 
@@ -290,7 +291,9 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
       >
         {/* TOP BAR */}
         <div className="flex justify-between items-start px-4 w-full">
-          <div className="drop-shadow-md">
+          <div className="flex flex-col">
+             {/* UPDATED: Correct Name in HUD */}
+             <h1 className="text-white font-bold text-base drop-shadow-md leading-none opacity-80">Flappy Warplet</h1>
              <span className="font-black text-4xl font-mono tracking-tighter" style={{ textShadow: '0 0 10px #855DCD' }}>
                {score} ETH
              </span>
@@ -336,7 +339,7 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
             </div>
           )}
 
-          {/* 2. GAME OVER SCREEN (REKT) - Separate from Leaderboard */}
+          {/* 2. GAME OVER SCREEN (REKT) */}
           {gameState === 'REKT' && !showLeaderboard && (
             <div className="pointer-events-auto bg-[#111827]/95 w-full max-w-sm rounded-3xl backdrop-blur-xl border border-red-500/50 shadow-2xl p-6 text-center transform transition-all duration-300 scale-100">
               <h2 className="text-4xl font-black text-red-500 drop-shadow-lg tracking-tighter uppercase mb-2">LIQUIDATED</h2>
@@ -373,7 +376,7 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
             </div>
           )}
 
-          {/* 3. LEADERBOARD MODAL (Show only when requested) */}
+          {/* 3. LEADERBOARD MODAL */}
           {showLeaderboard && (
             <div className="pointer-events-auto bg-[#111827]/95 w-full max-w-sm rounded-3xl backdrop-blur-xl border border-[#855DCD]/30 shadow-2xl flex flex-col overflow-hidden max-h-[70vh] z-50">
               <div className="p-5 text-center border-b border-white/10 bg-gradient-to-b from-[#855DCD]/20 to-transparent">
@@ -381,7 +384,6 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-2 no-scrollbar">
-                {/* Top 20 Only */}
                 {globalScores.slice(0, 20).map((u, i) => (
                   <div key={u.fid} className="flex items-center justify-between p-2 rounded-lg bg-white/5">
                     <div className="flex items-center gap-3">
