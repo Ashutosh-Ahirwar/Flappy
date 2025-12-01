@@ -7,7 +7,8 @@ export async function GET(request: Request) {
     const { searchParams, protocol, host } = new URL(request.url);
     const score = searchParams.get('score') || '0';
 
-    // Fetch hero.png
+    // 1. Fetch your Hero/Splash Image
+    // Ensure 'hero.png' is inside your public/ folder
     const bgUrl = `${protocol}//${host}/hero.png`; 
     const bgBuffer = await fetch(bgUrl).then((res) => res.arrayBuffer());
 
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
         >
           {/* BACKGROUND IMAGE LAYER */}
           <img
-            src={bgBuffer as any}
+            src={bgBuffer as any} // <--- Cast added here to fix the error
             style={{
               position: 'absolute',
               top: 0,
@@ -35,8 +36,7 @@ export async function GET(request: Request) {
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              // Increased opacity to 0.7 to make text more readable
-              opacity: 0.6 
+              opacity: 0.2 
             }}
           />
 
@@ -47,19 +47,16 @@ export async function GET(request: Request) {
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 10,
-            // Added text shadow to lift text off the background
-            textShadow: '0 4px 20px rgba(0,0,0,0.8)',
+            textShadow: '0 4px 10px rgba(0,0,0,0.8)',
           }}>
             
-            {/* TITLE: Changed to White for better contrast */}
             <div style={{ 
               display: 'flex', 
-              fontSize: 70, 
-              color: 'white', 
+              fontSize: 60, 
+              color: '#855DCD', 
               marginBottom: 10, 
               fontWeight: 900,
-              letterSpacing: '-2px',
-              textTransform: 'uppercase'
+              letterSpacing: '-2px'
             }}>
               Flappy Warplet
             </div>
@@ -67,8 +64,8 @@ export async function GET(request: Request) {
             <div style={{ 
               display: 'flex', 
               fontSize: 30, 
-              color: '#d1d5db', // Light gray
-              marginBottom: 5, 
+              color: '#e0e0e0', 
+              marginBottom: 0, 
               letterSpacing: '4px',
               textTransform: 'uppercase'
             }}>
@@ -77,27 +74,25 @@ export async function GET(request: Request) {
 
             <div style={{ 
               display: 'flex', 
-              fontSize: 160, 
+              fontSize: 150, 
               fontWeight: 900, 
               color: 'white',
-              // Stronger Neon Glow
-              textShadow: '0 0 50px #855DCD, 0 0 100px #855DCD',
-              marginTop: -20,
-              marginBottom: 20
+              textShadow: '0 0 40px #855DCD, 0 0 80px #855DCD',
+              marginTop: -10
             }}>
               {score} ETH
             </div>
 
-            {/* BUTTON */}
             <div style={{ 
               display: 'flex', 
-              padding: '15px 50px', 
-              background: 'linear-gradient(90deg, #855DCD 0%, #6d46b0 100%)',
+              marginTop: 40, 
+              padding: '15px 40px', 
+              background: 'rgba(133, 93, 205, 0.4)', 
+              border: '2px solid #855DCD',
               borderRadius: 50, 
               fontSize: 32,
               color: 'white',
-              fontWeight: 700,
-              boxShadow: '0 10px 30px rgba(133, 93, 205, 0.5)'
+              fontWeight: 700
             }}>
               Play on Farcaster
             </div>
