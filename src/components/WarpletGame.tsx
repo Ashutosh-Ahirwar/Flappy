@@ -12,12 +12,12 @@ import * as THREE from 'three';
 const GRAVITY = 0.06;
 const JUMP_FORCE = 1.6;
 const SPEED = 0.075;
-const PIPE_SPACING = 6;      // FIXED: Reduced distance (was 8)
+const PIPE_SPACING = 5;
 const GAP_SIZE = 4.2;
 const VIEW_DISTANCE = 16;
 const PLAYER_X_OFFSET = -2;
 const CANDLE_WIDTH = 1.0;
-const INITIAL_X = 10;        // Starting X position for the first pipe
+const INITIAL_X = 10;
 const TIP_ADDRESS = '0xa6DEe9FdE9E1203ad02228f00bF10235d9Ca3752';
 
 // --- COLORS ---
@@ -92,7 +92,6 @@ function GameScene({ imageUrl, gameState, setGameState, score, setScore }: any) 
   const velocity = useRef(0);
   const rotation = useRef(0);
 
-  // FIX 1: Calculate initial positions based on PIPE_SPACING
   const [candles, setCandles] = useState(() => [
     { id: 1, x: INITIAL_X, gapY: 0, passed: false },
     { id: 2, x: INITIAL_X + PIPE_SPACING, gapY: 1.5, passed: false },
@@ -134,11 +133,9 @@ function GameScene({ imageUrl, gameState, setGameState, score, setScore }: any) 
       return { ...c, x: newX };
     });
     
-    // Check if the first candle has gone off screen
     if (nextCandles[0].x < -15) {
       nextCandles.shift();
       const lastCandle = nextCandles[nextCandles.length - 1];
-      // Use the last candle's position to place the new one
       const nextX = lastCandle ? lastCandle.x + PIPE_SPACING : INITIAL_X;
       
       nextCandles.push({
@@ -161,7 +158,6 @@ function GameScene({ imageUrl, gameState, setGameState, score, setScore }: any) 
     });
   });
 
-  // FIX 2: Reset logic also needs to use PIPE_SPACING
   useEffect(() => {
     if (gameState === 'START') {
       playerPos.current.set(PLAYER_X_OFFSET, 0, 0);
@@ -199,27 +195,51 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
   const [safeArea, setSafeArea] = useState({ top: 0, bottom: 0 });
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [globalScores, setGlobalScores] = useState<LeaderboardUser[]>([]);
+  const [isAdded, setIsAdded] = useState(true); // Default true to avoid flash
+  const [showAddPopup, setShowAddPopup] = useState(false);
   
   const { sendTransaction } = useSendTransaction();
 
   useEffect(() => {
     const init = async () => {
       const context = await sdk.context;
+      
       if (context?.client?.safeAreaInsets) setSafeArea(context.client.safeAreaInsets);
+      
+      // Check if app is already added [cite: 546]
+      const added = context?.client?.added ?? false;
+      setIsAdded(added);
+      
+      // If not added, show popup automatically
+      if (!added) {
+        setShowAddPopup(true);
+      }
+
       sdk.actions.ready({ disableNativeGestures: true });
       fetchLeaderboard();
     };
     init();
   }, []);
 
+  // --- ACTIONS ---
+
+  const handleAddApp = async () => {
+    try {
+      // Trigger native add/bookmark prompt [cite: 608]
+      await sdk.actions.addMiniApp();
+      setIsAdded(true);
+      setShowAddPopup(false);
+    } catch (e) {
+      console.error("User rejected adding app", e);
+    }
+  };
+
   const fetchLeaderboard = async () => {
     try {
       const res = await fetch('/api/leaderboard');
       const data = await res.json();
       if (Array.isArray(data)) setGlobalScores(data);
-    } catch (e) {
-      console.error("Failed to fetch leaderboard", e);
-    }
+    } catch (e) { /* ignore */ }
   };
 
   const saveScore = async (finalScore: number) => {
@@ -236,22 +256,18 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
         })
       });
       fetchLeaderboard();
-    } catch (e) {
-      console.error("Failed to save score", e);
-    }
+    } catch (e) { /* ignore */ }
   };
 
   const handleTip = () => {
-    sendTransaction({
-      to: TIP_ADDRESS,
-      value: parseEther('0.001'), 
-    });
+    sendTransaction({ to: TIP_ADDRESS, value: parseEther('0.001') });
   };
 
   const handleShare = () => {
+    const shareUrl = `https://flappy-dun.vercel.app?score=${score}`;
     sdk.actions.composeCast({
       text: `I just scored ${score} ETH on Warp Flap with Warplet #${user.fid}! 🚀\n\nCan you beat me?`,
-      embeds: ['https://warplets.com'] 
+      embeds: [shareUrl] 
     });
   };
 
@@ -282,13 +298,26 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
       <div className="absolute inset-0 z-20 pointer-events-none flex flex-col"
         style={{ paddingTop: Math.max(safeArea.top, 16), paddingBottom: Math.max(safeArea.bottom, 20) }}
       >
+        {/* TOP BAR: Score + Buttons */}
         <div className="flex justify-between items-start px-4 w-full">
           <div className="drop-shadow-md">
              <span className="font-black text-4xl font-mono tracking-tighter" style={{ textShadow: '0 0 10px #855DCD' }}>
                {score} ETH
              </span>
           </div>
+          
           <div className="flex gap-2 pointer-events-auto">
+            {/* BOOKMARK BUTTON (Only shows if not added) */}
+            {!isAdded && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); handleAddApp(); }}
+                className="bg-yellow-500/20 hover:bg-yellow-500/40 border border-yellow-500/50 text-yellow-300 font-bold p-2 rounded-lg transition animate-pulse"
+                title="Bookmark App"
+              >
+                ⭐
+              </button>
+            )}
+
             <button 
               onClick={(e) => { e.stopPropagation(); setShowLeaderboard(!showLeaderboard); }}
               className="bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white font-bold p-2 rounded-lg transition"
@@ -304,6 +333,31 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
           </div>
         </div>
 
+        {/* --- ADD APP POPUP (Shows on load if not added) --- */}
+        {showAddPopup && (
+          <div className="absolute top-20 left-0 w-full flex justify-center pointer-events-auto z-50">
+            <div className="bg-[#111827]/95 border border-[#855DCD] p-4 rounded-2xl shadow-[0_0_30px_#855DCD] max-w-[300px] flex flex-col gap-3 text-center backdrop-blur-md">
+              <h3 className="font-bold text-lg text-white">Bookmark Warplet?</h3>
+              <p className="text-xs text-gray-300">Add to your apps so you don't lose your high score!</p>
+              <div className="flex gap-2">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setShowAddPopup(false); }}
+                  className="flex-1 py-2 text-xs text-gray-400 font-bold hover:text-white"
+                >
+                  Later
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); handleAddApp(); }}
+                  className="flex-1 bg-[#855DCD] py-2 rounded-lg text-xs font-bold hover:bg-[#6d46b0]"
+                >
+                  Add App
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CENTER CONTENT */}
         <div className="flex-1 flex items-center justify-center p-4">
           {gameState === 'START' && !showLeaderboard && (
             <div className="text-center animate-pulse bg-black/40 p-6 rounded-2xl backdrop-blur-sm border border-white/5">
@@ -328,7 +382,7 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
                 )}
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              <div className="flex-1 overflow-y-auto p-4 space-y-2 no-scrollbar">
                 {globalScores.length > 0 ? (
                   globalScores.map((u, i) => (
                     <div key={u.fid} className="flex items-center justify-between p-2 rounded-lg bg-white/5">

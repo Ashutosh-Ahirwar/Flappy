@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk';
-import { useReadContract, useConnection, useConnect, useConnectors } from 'wagmi'; // Changed useAccount -> useConnection
+import { useReadContract, useAccount, useConnect, useConnectors } from 'wagmi'; 
 import { parseAbi } from 'viem';
 import WarpletGame from '../components/WarpletGame';
 
@@ -24,8 +24,9 @@ export default function Home() {
   const [userData, setUserData] = useState<{ fid: number; username: string; pfpUrl: string } | null>(null);
   const [imageUrl, setImageUrl] = useState<string>('');
   
-  // Wallet Hooks (Wagmi v3)
-  const { address, isConnected } = useConnection(); // Replaces useAccount
+  // Wallet Hooks
+  // useAccount is the standard hook for checking current connection state
+  const { address, isConnected } = useAccount(); 
   const { connect } = useConnect();
   const connectors = useConnectors(); 
 
@@ -81,10 +82,13 @@ export default function Home() {
 
   // --- CONNECT HANDLER ---
   const handleConnect = () => {
+    // 1. Try to find our custom 'farcaster' connector
     const farcasterConnector = connectors.find((c) => c.id === 'farcaster');
+    
     if (farcasterConnector) {
       connect({ connector: farcasterConnector });
     } else {
+      // 2. Fallback to the first available (usually Injected/MetaMask for local testing)
       const firstAvailable = connectors[0];
       if (firstAvailable) connect({ connector: firstAvailable });
     }
@@ -131,7 +135,7 @@ export default function Home() {
     );
   }
 
-  // D. Access Denied
+  // D. Access Denied (Wallet connected, but doesn't own the NFT)
   if (ownerAddress && address && ownerAddress.toLowerCase() !== address.toLowerCase()) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-[#0f0518] text-white p-6 text-center">
@@ -161,18 +165,26 @@ export default function Home() {
     );
   }
 
-  // E. Token Not Minted
+  // E. Token Not Minted (Contract says owner is 0x0 or call failed)
   if (!ownerAddress) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-[#0f0518] text-white p-6 text-center">
         <h2 className="text-2xl font-bold mb-2 text-gray-300">Warplet #{userData.fid} Not Found</h2>
-        <p className="text-gray-500 text-sm max-w-xs">
+        <p className="text-gray-500 text-sm max-w-xs mb-6">
           It seems this Warplet has not been minted yet.
         </p>
+        <a 
+            href={`https://opensea.io/collection/warplets`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-[#855DCD] hover:bg-[#6d46b0] text-white font-bold py-3 px-6 rounded-xl transition"
+          >
+            Check Collection
+        </a>
       </div>
     );
   }
 
-  // F. Success
+  // F. Success - Render Game
   return <WarpletGame imageUrl={imageUrl} user={userData} />;
 }
