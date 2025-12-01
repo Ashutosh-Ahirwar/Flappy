@@ -15,7 +15,7 @@
     "imageUrl": "https://flappy-dun.vercel.app/hero.png",
     "buttonTitle": "Play Flappy Warplet",
     "splashImageUrl": "https://flappy-dun.vercel.app/splash.png",
-    "splashBackgroundColor": "#0f0518",
+    "splashBackgroundColor": "#E5D4FF",
     "webhookUrl": "https://flappy-dun.vercel.app/api/webhook",
     "subtitle": "Dodge the candles!",
     "description": "Guide your Warplet through the volatile charts. Tap to fly, dodge the candles, and set a new high score.",
