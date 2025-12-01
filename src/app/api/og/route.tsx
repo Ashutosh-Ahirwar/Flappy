@@ -4,25 +4,17 @@ export const runtime = 'edge';
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams, protocol, host } = new URL(request.url);
     const score = searchParams.get('score') || '0';
 
-    // 1. Setup Background
-    const APP_URL = "https://flappy-dun.vercel.app"; // Ensure this matches your deployment
+    const APP_URL = "https://flappy-dun.vercel.app";
     const bgUrl = `${APP_URL}/hero.png`;
     
     let bgBuffer: ArrayBuffer | null = null;
-    
     try {
       const res = await fetch(bgUrl);
-      if (res.ok) {
-        bgBuffer = await res.arrayBuffer();
-      } else {
-        console.error("Image fetch failed", res.status);
-      }
-    } catch (e) {
-      console.error("BG Image Failed, using gradient fallback", e);
-    }
+      if (res.ok) bgBuffer = await res.arrayBuffer();
+    } catch (e) { console.error("BG Image Failed", e); }
 
     return new ImageResponse(
       (
@@ -34,16 +26,13 @@ export async function GET(request: Request) {
             alignItems: 'center',
             justifyContent: 'center',
             flexDirection: 'column',
-            // Fallback Gradient if image fails
-            background: 'linear-gradient(to bottom, #0f0518, #2a0a4a)', 
+            background: 'linear-gradient(to bottom, #0f0518, #1a0a2e)', 
             position: 'relative',
           }}
         >
           {/* BACKGROUND IMAGE LAYER */}
-          {/* We check if bgBuffer exists before rendering */}
           {bgBuffer && (
              <img
-             // FIX: Cast ArrayBuffer to 'any' to bypass React's string-only restriction
              src={bgBuffer as any}
              style={{
                position: 'absolute',
@@ -52,7 +41,8 @@ export async function GET(request: Request) {
                width: '100%',
                height: '100%',
                objectFit: 'cover',
-               opacity: 0.6 
+               // Very subtle background to let text pop
+               opacity: 0.2 
              }}
            />
           )}
@@ -64,19 +54,47 @@ export async function GET(request: Request) {
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 10,
-            textShadow: '0 4px 20px rgba(0,0,0,0.8)',
+            textShadow: '0 4px 30px rgba(0,0,0,0.9)', 
           }}>
-            <div style={{ display: 'flex', fontSize: 70, color: 'white', marginBottom: 10, fontWeight: 900, letterSpacing: '-2px', textTransform: 'uppercase' }}>
-              Flappy Warplet
+            
+            {/* TITLE */}
+            <div style={{ 
+              display: 'flex', 
+              fontSize: 80, 
+              color: 'white', 
+              marginBottom: 10, 
+              fontWeight: 900,
+              letterSpacing: '-2px',
+              textTransform: 'uppercase',
+              textShadow: '0 0 20px #855DCD'
+            }}>
+              WARP FLAP
             </div>
-            <div style={{ display: 'flex', fontSize: 30, color: '#d1d5db', marginBottom: 5, letterSpacing: '4px', textTransform: 'uppercase' }}>
+            
+            {/* SUBTITLE */}
+            <div style={{ 
+              display: 'flex', 
+              fontSize: 32, 
+              color: '#a884f3', 
+              marginBottom: 10, 
+              letterSpacing: '8px',
+              textTransform: 'uppercase',
+              fontWeight: 700
+            }}>
               GAME SCORE
             </div>
-            <div style={{ display: 'flex', fontSize: 160, fontWeight: 900, color: 'white', textShadow: '0 0 50px #855DCD, 0 0 100px #855DCD', marginTop: -20, marginBottom: 20 }}>
+
+            {/* DYNAMIC SCORE - Massive & Glowing */}
+            <div style={{ 
+              display: 'flex', 
+              fontSize: 220, 
+              fontWeight: 900, 
+              color: 'white',
+              textShadow: '0 0 80px #855DCD, 0 0 150px #855DCD',
+              marginTop: -10,
+              lineHeight: 1,
+            }}>
               {score} ETH
-            </div>
-            <div style={{ display: 'flex', padding: '15px 50px', background: 'linear-gradient(90deg, #855DCD 0%, #6d46b0 100%)', borderRadius: 50, fontSize: 32, color: 'white', fontWeight: 700 }}>
-              Play on Farcaster
             </div>
           </div>
         </div>
@@ -85,7 +103,7 @@ export async function GET(request: Request) {
         width: 1200,
         height: 630,
         headers: {
-          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Cache-Control': 'public, max-age=3600, immutable', 
         },
       },
     );
