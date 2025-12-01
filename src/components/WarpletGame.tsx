@@ -9,14 +9,16 @@ import { parseEther } from 'viem';
 import * as THREE from 'three';
 
 // --- PHYSICS & TUNING ---
-const GRAVITY = 0.06;
+const GRAVITY = 0.07;
 const JUMP_FORCE = 1.6;
-const SPEED = 0.075;
-const PIPE_SPACING = 6;
+const SPEED = 0.09;
+const PIPE_SPACING = 5;
 const GAP_SIZE = 4.2;
 const VIEW_DISTANCE = 16;
 const PLAYER_X_OFFSET = -2;
 const CANDLE_WIDTH = 1.0;
+const PLAYER_SCALE = 1.5;     // Visual Size
+const PLAYER_HITBOX = 0.6;    // Collision Radius (Slightly smaller than visual for forgiveness)
 const INITIAL_X = 10;
 const TIP_ADDRESS = '0xa6DEe9FdE9E1203ad02228f00bF10235d9Ca3752';
 
@@ -43,7 +45,7 @@ function Player({ url, position, rotation }: { url: string; position: THREE.Vect
   return (
     <group ref={mesh}>
       <Billboard follow={true}>
-        <Image url={url} scale={[1.5, 1.5]} transparent />
+        <Image url={url} scale={[PLAYER_SCALE, PLAYER_SCALE]} transparent />
       </Billboard>
       <pointLight distance={4} intensity={3} color="#855DCD" />
     </group>
@@ -149,9 +151,21 @@ function GameScene({ imageUrl, gameState, setGameState, score, setScore }: any) 
 
     if (playerPos.current.y < -9 || playerPos.current.y > 9) setGameState('REKT');
 
+    // IMPROVED COLLISION LOGIC
     nextCandles.forEach(c => {
-      if (Math.abs(c.x - playerPos.current.x) < (CANDLE_WIDTH / 2 + 0.3)) {
-        if (playerPos.current.y > c.gapY + GAP_SIZE / 2 || playerPos.current.y < c.gapY - GAP_SIZE / 2) {
+      // Check Horizontal Overlap (accounting for player width)
+      const dx = Math.abs(c.x - playerPos.current.x);
+      const collisionThresholdX = (CANDLE_WIDTH / 2) + PLAYER_HITBOX;
+      
+      if (dx < collisionThresholdX) {
+        // Check Vertical Overlap (Top Head or Bottom Feet hitting pipe)
+        const playerTop = playerPos.current.y + PLAYER_HITBOX;
+        const playerBottom = playerPos.current.y - PLAYER_HITBOX;
+        const gapTop = c.gapY + GAP_SIZE / 2;
+        const gapBottom = c.gapY - GAP_SIZE / 2;
+
+        // If Head hits top pipe OR Feet hits bottom pipe
+        if (playerTop > gapTop || playerBottom < gapBottom) {
            setGameState('REKT');
         }
       }
@@ -203,7 +217,6 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
   useEffect(() => {
     const init = async () => {
       const context = await sdk.context;
-      
       if (context?.client?.safeAreaInsets) setSafeArea(context.client.safeAreaInsets);
       
       const added = context?.client?.added ?? false;
@@ -256,7 +269,7 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
   const handleShare = () => {
     const shareUrl = `https://flappy-dun.vercel.app?score=${score}`;
     sdk.actions.composeCast({
-      text: `I just scored ${score} ETH on Warp Flap with Warplet #${user.fid}! 🚀\n\nCan you beat me?`,
+      text: `I just scored ${score} ETH on Flappy Warplet with Warplet #${user.fid}! 🚀\n\nCan you beat me?`,
       embeds: [shareUrl] 
     });
   };
@@ -264,7 +277,7 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
   useEffect(() => {
     if (gameState === 'REKT') {
       saveScore(score);
-      setShowLeaderboard(false); // DO NOT auto-show leaderboard on death
+      setShowLeaderboard(false); 
     }
   }, [gameState]);
 
@@ -336,11 +349,11 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
             </div>
           )}
 
-          {/* 2. GAME OVER SCREEN (REKT) - Separate from Leaderboard */}
+          {/* 2. GAME OVER SCREEN (REKT) */}
           {gameState === 'REKT' && !showLeaderboard && (
             <div className="pointer-events-auto bg-[#111827]/95 w-full max-w-sm rounded-3xl backdrop-blur-xl border border-red-500/50 shadow-2xl p-6 text-center transform transition-all duration-300 scale-100">
               <h2 className="text-4xl font-black text-red-500 drop-shadow-lg tracking-tighter uppercase mb-2">LIQUIDATED</h2>
-              <p className="text-xs text-gray-400 mb-6">Don't give up, anon.</p>
+              <p className="text-xs text-gray-400 mb-6">You got rekt.</p>
               
               <div className="bg-black/40 py-3 px-4 rounded-2xl border border-white/5 inline-block mb-6 w-full">
                 <span className="text-[10px] font-bold uppercase text-gray-500 block mb-1 tracking-widest">Final Portfolio</span>
@@ -373,7 +386,7 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
             </div>
           )}
 
-          {/* 3. LEADERBOARD MODAL (Show only when requested) */}
+          {/* 3. LEADERBOARD MODAL */}
           {showLeaderboard && (
             <div className="pointer-events-auto bg-[#111827]/95 w-full max-w-sm rounded-3xl backdrop-blur-xl border border-[#855DCD]/30 shadow-2xl flex flex-col overflow-hidden max-h-[70vh] z-50">
               <div className="p-5 text-center border-b border-white/10 bg-gradient-to-b from-[#855DCD]/20 to-transparent">
