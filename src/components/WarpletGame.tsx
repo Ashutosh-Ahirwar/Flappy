@@ -12,7 +12,7 @@ import * as THREE from 'three';
 const GRAVITY = 0.06;
 const JUMP_FORCE = 1.6;
 const SPEED = 0.075;
-const PIPE_SPACING = 5;      // FIXED: Reduced distance (was 8)
+const PIPE_SPACING = 6;      // FIXED: Reduced distance (was 8)
 const GAP_SIZE = 4.2;
 const VIEW_DISTANCE = 16;
 const PLAYER_X_OFFSET = -2;
