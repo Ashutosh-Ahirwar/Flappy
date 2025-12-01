@@ -195,7 +195,7 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
   const [safeArea, setSafeArea] = useState({ top: 0, bottom: 0 });
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [globalScores, setGlobalScores] = useState<LeaderboardUser[]>([]);
-  const [isAdded, setIsAdded] = useState(true); // Default true to avoid flash
+  const [isAdded, setIsAdded] = useState(true); 
   const [showAddPopup, setShowAddPopup] = useState(false);
   
   const { sendTransaction } = useSendTransaction();
@@ -206,14 +206,9 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
       
       if (context?.client?.safeAreaInsets) setSafeArea(context.client.safeAreaInsets);
       
-      // Check if app is already added [cite: 546]
       const added = context?.client?.added ?? false;
       setIsAdded(added);
-      
-      // If not added, show popup automatically
-      if (!added) {
-        setShowAddPopup(true);
-      }
+      if (!added) setShowAddPopup(true);
 
       sdk.actions.ready({ disableNativeGestures: true });
       fetchLeaderboard();
@@ -221,17 +216,12 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
     init();
   }, []);
 
-  // --- ACTIONS ---
-
   const handleAddApp = async () => {
     try {
-      // Trigger native add/bookmark prompt [cite: 608]
       await sdk.actions.addMiniApp();
       setIsAdded(true);
       setShowAddPopup(false);
-    } catch (e) {
-      console.error("User rejected adding app", e);
-    }
+    } catch (e) { /* ignore */ }
   };
 
   const fetchLeaderboard = async () => {
@@ -274,7 +264,7 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
   useEffect(() => {
     if (gameState === 'REKT') {
       saveScore(score);
-      setShowLeaderboard(true);
+      setShowLeaderboard(false); // DO NOT auto-show leaderboard on death
     }
   }, [gameState]);
 
@@ -286,7 +276,7 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
           gameState={gameState} 
           setGameState={(state: any) => {
             setGameState(state);
-            if (state === 'REKT') setShowLeaderboard(true); 
+            if (state === 'REKT') setShowLeaderboard(false); 
           }} 
           score={score} 
           setScore={setScore} 
@@ -298,7 +288,7 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
       <div className="absolute inset-0 z-20 pointer-events-none flex flex-col"
         style={{ paddingTop: Math.max(safeArea.top, 16), paddingBottom: Math.max(safeArea.bottom, 20) }}
       >
-        {/* TOP BAR: Score + Buttons */}
+        {/* TOP BAR */}
         <div className="flex justify-between items-start px-4 w-full">
           <div className="drop-shadow-md">
              <span className="font-black text-4xl font-mono tracking-tighter" style={{ textShadow: '0 0 10px #855DCD' }}>
@@ -307,12 +297,11 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
           </div>
           
           <div className="flex gap-2 pointer-events-auto">
-            {/* BOOKMARK BUTTON (Only shows if not added) */}
             {!isAdded && (
               <button 
                 onClick={(e) => { e.stopPropagation(); handleAddApp(); }}
                 className="bg-yellow-500/20 hover:bg-yellow-500/40 border border-yellow-500/50 text-yellow-300 font-bold p-2 rounded-lg transition animate-pulse"
-                title="Bookmark App"
+                title="Bookmark"
               >
                 ⭐
               </button>
@@ -333,33 +322,11 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
           </div>
         </div>
 
-        {/* --- ADD APP POPUP (Shows on load if not added) --- */}
-        {showAddPopup && (
-          <div className="absolute top-20 left-0 w-full flex justify-center pointer-events-auto z-50">
-            <div className="bg-[#111827]/95 border border-[#855DCD] p-4 rounded-2xl shadow-[0_0_30px_#855DCD] max-w-[300px] flex flex-col gap-3 text-center backdrop-blur-md">
-              <h3 className="font-bold text-lg text-white">Bookmark Warplet?</h3>
-              <p className="text-xs text-gray-300">Add to your apps so you don't lose your high score!</p>
-              <div className="flex gap-2">
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setShowAddPopup(false); }}
-                  className="flex-1 py-2 text-xs text-gray-400 font-bold hover:text-white"
-                >
-                  Later
-                </button>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); handleAddApp(); }}
-                  className="flex-1 bg-[#855DCD] py-2 rounded-lg text-xs font-bold hover:bg-[#6d46b0]"
-                >
-                  Add App
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* CENTER CONTENT */}
+        {/* --- POPUP LAYERS --- */}
         <div className="flex-1 flex items-center justify-center p-4">
-          {gameState === 'START' && !showLeaderboard && (
+          
+          {/* 1. START SCREEN */}
+          {gameState === 'START' && !showLeaderboard && !showAddPopup && (
             <div className="text-center animate-pulse bg-black/40 p-6 rounded-2xl backdrop-blur-sm border border-white/5">
               <h2 className="text-2xl font-black tracking-widest text-[#855DCD]">TAP TO FLY</h2>
               <div className="flex items-center gap-2 mt-4 justify-center bg-white/5 p-2 rounded-lg">
@@ -369,38 +336,69 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
             </div>
           )}
 
+          {/* 2. GAME OVER SCREEN (REKT) - Separate from Leaderboard */}
+          {gameState === 'REKT' && !showLeaderboard && (
+            <div className="pointer-events-auto bg-[#111827]/95 w-full max-w-sm rounded-3xl backdrop-blur-xl border border-red-500/50 shadow-2xl p-6 text-center transform transition-all duration-300 scale-100">
+              <h2 className="text-4xl font-black text-red-500 drop-shadow-lg tracking-tighter uppercase mb-2">LIQUIDATED</h2>
+              <p className="text-xs text-gray-400 mb-6">You got rekt.</p>
+              
+              <div className="bg-black/40 py-3 px-4 rounded-2xl border border-white/5 inline-block mb-6 w-full">
+                <span className="text-[10px] font-bold uppercase text-gray-500 block mb-1 tracking-widest">Final Portfolio</span>
+                <div className="text-4xl font-mono text-white font-bold">{score} ETH</div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setGameState('START'); }} 
+                    className="bg-white/10 text-white font-bold py-3 rounded-xl hover:bg-white/20 active:scale-95 transition"
+                  >
+                    Restart
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleShare(); }} 
+                    className="bg-purple-600 text-white font-bold py-3 rounded-xl hover:bg-purple-500 active:scale-95 transition"
+                  >
+                    Share 🚀
+                  </button>
+                </div>
+                
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setShowLeaderboard(true); }}
+                  className="w-full bg-[#855DCD]/20 text-[#855DCD] hover:bg-[#855DCD]/30 font-bold py-3 rounded-xl transition flex items-center justify-center gap-2"
+                >
+                  <span>🏆 View Leaderboard</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 3. LEADERBOARD MODAL (Show only when requested) */}
           {showLeaderboard && (
-            <div className="pointer-events-auto bg-[#111827]/95 w-full max-w-sm rounded-3xl backdrop-blur-xl border border-[#855DCD]/30 shadow-2xl flex flex-col overflow-hidden max-h-[70vh]">
+            <div className="pointer-events-auto bg-[#111827]/95 w-full max-w-sm rounded-3xl backdrop-blur-xl border border-[#855DCD]/30 shadow-2xl flex flex-col overflow-hidden max-h-[70vh] z-50">
               <div className="p-5 text-center border-b border-white/10 bg-gradient-to-b from-[#855DCD]/20 to-transparent">
-                {gameState === 'REKT' ? (
-                  <>
-                    <h2 className="text-3xl font-black text-red-500 drop-shadow-lg tracking-tighter uppercase">LIQUIDATED</h2>
-                    <p className="text-xs text-gray-400 mt-1">Don't give up, anon.</p>
-                  </>
-                ) : (
-                  <h2 className="text-2xl font-black text-white tracking-widest uppercase">Leaderboard</h2>
-                )}
+                <h2 className="text-2xl font-black text-white tracking-widest uppercase">Leaderboard</h2>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-2 no-scrollbar">
-                {globalScores.length > 0 ? (
-                  globalScores.map((u, i) => (
-                    <div key={u.fid} className="flex items-center justify-between p-2 rounded-lg bg-white/5">
-                      <div className="flex items-center gap-3">
-                        <span className="text-gray-500 font-mono w-4 text-xs">{i + 1}</span>
-                        <img src={u.pfp_url || 'https://warpcast.com/avatar.png'} className="w-6 h-6 rounded-full" />
-                        <span className="font-semibold text-sm">{u.username}</span>
-                      </div>
-                      <span className="font-mono text-[#855DCD] text-sm">{u.score}</span>
+                {/* Top 20 Only */}
+                {globalScores.slice(0, 20).map((u, i) => (
+                  <div key={u.fid} className="flex items-center justify-between p-2 rounded-lg bg-white/5">
+                    <div className="flex items-center gap-3">
+                      <span className="text-gray-500 font-mono w-4 text-xs">{i + 1}</span>
+                      <img src={u.pfp_url || 'https://warpcast.com/avatar.png'} className="w-6 h-6 rounded-full" />
+                      <span className="font-semibold text-sm truncate max-w-[120px]">{u.username}</span>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-4 text-gray-500 text-xs">
-                    Loading top scores...
+                    <span className="font-mono text-[#855DCD] text-sm">{u.score}</span>
                   </div>
+                ))}
+
+                {globalScores.length === 0 && (
+                  <div className="text-center py-4 text-gray-500 text-xs">No scores yet.</div>
                 )}
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-[#855DCD] text-white shadow-lg transform scale-105 border border-white/20 mt-2">
+                {/* Sticky User Row */}
+                <div className="flex items-center justify-between p-3 rounded-xl bg-[#855DCD] text-white shadow-lg border border-white/20 mt-2 sticky bottom-0">
                   <div className="flex items-center gap-3">
                     <span className="font-mono w-4 text-xs opacity-70">★</span>
                     <img src={user.pfpUrl} className="w-8 h-8 rounded-full border-2 border-white/30" />
@@ -413,19 +411,37 @@ export default function WarpletGame({ imageUrl, user }: { imageUrl: string; user
                 </div>
               </div>
 
-              <div className="p-4 bg-black/40 border-t border-white/10 grid grid-cols-2 gap-3">
+              <div className="p-4 bg-black/40 border-t border-white/10">
                 <button 
-                  onClick={(e) => { e.stopPropagation(); setShowLeaderboard(false); setGameState('START'); }} 
-                  className="bg-white/10 text-white font-bold py-3 rounded-xl hover:bg-white/20 transition active:scale-95"
+                  onClick={(e) => { e.stopPropagation(); setShowLeaderboard(false); }} 
+                  className="w-full bg-white/10 text-white font-bold py-3 rounded-xl hover:bg-white/20 transition active:scale-95"
                 >
-                  {gameState === 'REKT' ? 'Restart' : 'Close'}
+                  Close
                 </button>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); handleShare(); }} 
-                  className="bg-[#855DCD] text-white font-bold py-3 rounded-xl hover:bg-[#6d46b0] transition active:scale-95 flex items-center justify-center gap-2"
-                >
-                  Share 🚀
-                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 4. ADD APP POPUP */}
+          {showAddPopup && (
+            <div className="absolute top-20 left-0 w-full flex justify-center pointer-events-auto z-50">
+              <div className="bg-[#111827]/95 border border-[#855DCD] p-4 rounded-2xl shadow-[0_0_30px_#855DCD] max-w-[300px] flex flex-col gap-3 text-center backdrop-blur-md">
+                <h3 className="font-bold text-lg text-white">Bookmark Warplet?</h3>
+                <p className="text-xs text-gray-300">Add to your apps so you don't lose your high score!</p>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setShowAddPopup(false); }}
+                    className="flex-1 py-2 text-xs text-gray-400 font-bold hover:text-white"
+                  >
+                    Later
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleAddApp(); }}
+                    className="flex-1 bg-[#855DCD] py-2 rounded-lg text-xs font-bold hover:bg-[#6d46b0]"
+                  >
+                    Add App
+                  </button>
+                </div>
               </div>
             </div>
           )}

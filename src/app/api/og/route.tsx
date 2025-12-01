@@ -7,9 +7,7 @@ export async function GET(request: Request) {
     const { searchParams, protocol, host } = new URL(request.url);
     const score = searchParams.get('score') || '0';
 
-    // 1. Fetch your Hero Image to use as the background
-    // We assume 'hero.png' exists in your public folder. 
-    // If you prefer the splash screen, change 'hero.png' to 'splash.png'
+    // Fetch hero.png
     const bgUrl = `${protocol}//${host}/hero.png`; 
     const bgBuffer = await fetch(bgUrl).then((res) => res.arrayBuffer());
 
@@ -23,15 +21,13 @@ export async function GET(request: Request) {
             alignItems: 'center',
             justifyContent: 'center',
             flexDirection: 'column',
-            backgroundColor: '#0f0518', // Fallback color
-            position: 'relative', // Needed for stacking
+            backgroundColor: '#0f0518',
+            position: 'relative',
           }}
         >
           {/* BACKGROUND IMAGE LAYER */}
-          {/* @ts-ignore */}
           <img
-            // FIX: Cast to 'any' because next/og accepts buffers, even if React types don't
-            src={bgBuffer as any} 
+            src={bgBuffer as any}
             style={{
               position: 'absolute',
               top: 0,
@@ -39,36 +35,40 @@ export async function GET(request: Request) {
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              opacity: 0.4 
+              // Increased opacity to 0.7 to make text more readable
+              opacity: 0.6 
             }}
           />
-          {/* TEXT CONTENT LAYER (Sitting on top) */}
+
+          {/* TEXT CONTENT LAYER */}
           <div style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 10,
-            textShadow: '0 4px 10px rgba(0,0,0,0.8)', // Strong shadow for readability
+            // Added text shadow to lift text off the background
+            textShadow: '0 4px 20px rgba(0,0,0,0.8)',
           }}>
             
+            {/* TITLE: Changed to White for better contrast */}
             <div style={{ 
               display: 'flex', 
-              fontSize: 60, 
-              color: '#855DCD', 
+              fontSize: 70, 
+              color: 'white', 
               marginBottom: 10, 
               fontWeight: 900,
-              letterSpacing: '-2px'
+              letterSpacing: '-2px',
+              textTransform: 'uppercase'
             }}>
-              WARP FLAP
+              Flappy Warplet
             </div>
             
-            {/* CHANGED: More clear terminology */}
             <div style={{ 
               display: 'flex', 
               fontSize: 30, 
-              color: '#e0e0e0', 
-              marginBottom: 0, 
+              color: '#d1d5db', // Light gray
+              marginBottom: 5, 
               letterSpacing: '4px',
               textTransform: 'uppercase'
             }}>
@@ -77,27 +77,27 @@ export async function GET(request: Request) {
 
             <div style={{ 
               display: 'flex', 
-              fontSize: 150, 
+              fontSize: 160, 
               fontWeight: 900, 
               color: 'white',
-              // Neon Glow Effect
-              textShadow: '0 0 40px #855DCD, 0 0 80px #855DCD',
-              marginTop: -10
+              // Stronger Neon Glow
+              textShadow: '0 0 50px #855DCD, 0 0 100px #855DCD',
+              marginTop: -20,
+              marginBottom: 20
             }}>
               {score} ETH
             </div>
 
-            {/* "Play Now" Badge */}
+            {/* BUTTON */}
             <div style={{ 
               display: 'flex', 
-              marginTop: 40, 
-              padding: '15px 40px', 
-              background: 'rgba(133, 93, 205, 0.4)', 
-              border: '2px solid #855DCD',
+              padding: '15px 50px', 
+              background: 'linear-gradient(90deg, #855DCD 0%, #6d46b0 100%)',
               borderRadius: 50, 
               fontSize: 32,
               color: 'white',
-              fontWeight: 700
+              fontWeight: 700,
+              boxShadow: '0 10px 30px rgba(133, 93, 205, 0.5)'
             }}>
               Play on Farcaster
             </div>
@@ -107,7 +107,6 @@ export async function GET(request: Request) {
       {
         width: 1200,
         height: 630,
-        // Caching is crucial for performance [cite: 395]
         headers: {
           'Cache-Control': 'public, max-age=3600, immutable',
         },
