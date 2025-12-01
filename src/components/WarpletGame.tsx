@@ -12,11 +12,12 @@ import * as THREE from 'three';
 const GRAVITY = 0.06;
 const JUMP_FORCE = 1.6;
 const SPEED = 0.075;
-const PIPE_SPACING = 1;
+const PIPE_SPACING = 5;      // FIXED: Reduced distance (was 8)
 const GAP_SIZE = 4.2;
 const VIEW_DISTANCE = 16;
 const PLAYER_X_OFFSET = -2;
 const CANDLE_WIDTH = 1.0;
+const INITIAL_X = 10;        // Starting X position for the first pipe
 const TIP_ADDRESS = '0xa6DEe9FdE9E1203ad02228f00bF10235d9Ca3752';
 
 // --- COLORS ---
@@ -90,7 +91,13 @@ function GameScene({ imageUrl, gameState, setGameState, score, setScore }: any) 
   const playerPos = useRef(new THREE.Vector3(PLAYER_X_OFFSET, 0, 0));
   const velocity = useRef(0);
   const rotation = useRef(0);
-  const [candles, setCandles] = useState(() => [{ id: 1, x: 10, gapY: 0, passed: false }]);
+
+  // FIX 1: Calculate initial positions based on PIPE_SPACING
+  const [candles, setCandles] = useState(() => [
+    { id: 1, x: INITIAL_X, gapY: 0, passed: false },
+    { id: 2, x: INITIAL_X + PIPE_SPACING, gapY: 1.5, passed: false },
+    { id: 3, x: INITIAL_X + PIPE_SPACING * 2, gapY: -1.5, passed: false }
+  ]);
 
   const jump = () => {
     if (gameState === 'REKT') return;
@@ -127,10 +134,13 @@ function GameScene({ imageUrl, gameState, setGameState, score, setScore }: any) 
       return { ...c, x: newX };
     });
     
+    // Check if the first candle has gone off screen
     if (nextCandles[0].x < -15) {
       nextCandles.shift();
       const lastCandle = nextCandles[nextCandles.length - 1];
-      const nextX = lastCandle ? lastCandle.x + PIPE_SPACING : 10;
+      // Use the last candle's position to place the new one
+      const nextX = lastCandle ? lastCandle.x + PIPE_SPACING : INITIAL_X;
+      
       nextCandles.push({
         id: Math.random(),
         x: nextX,
@@ -151,12 +161,17 @@ function GameScene({ imageUrl, gameState, setGameState, score, setScore }: any) 
     });
   });
 
+  // FIX 2: Reset logic also needs to use PIPE_SPACING
   useEffect(() => {
     if (gameState === 'START') {
       playerPos.current.set(PLAYER_X_OFFSET, 0, 0);
       velocity.current = 0;
       rotation.current = 0;
-      setCandles([{ id: 1, x: 10, gapY: 0, passed: false }]);
+      setCandles([
+        { id: 1, x: INITIAL_X, gapY: 0, passed: false },
+        { id: 2, x: INITIAL_X + PIPE_SPACING, gapY: 1.5, passed: false },
+        { id: 3, x: INITIAL_X + PIPE_SPACING * 2, gapY: -1.5, passed: false }
+      ]);
       setScore(0);
     }
   }, [gameState]);
