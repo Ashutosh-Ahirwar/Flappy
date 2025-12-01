@@ -5,6 +5,9 @@ export const runtime = 'edge';
 export async function GET(request: Request) {
   try {
     const { searchParams, protocol, host } = new URL(request.url);
+    
+    // FIX: Check if 'score' is present in the URL at all (even if it is 0)
+    const hasScore = searchParams.has('score');
     const score = searchParams.get('score') || '0';
 
     const APP_URL = "https://flappy-dun.vercel.app";
@@ -26,7 +29,7 @@ export async function GET(request: Request) {
             alignItems: 'center',
             justifyContent: 'center',
             flexDirection: 'column',
-            background: 'linear-gradient(to bottom, #0f0518, #1a0a2e)', 
+            background: '#0f0518',
             position: 'relative',
           }}
         >
@@ -41,62 +44,62 @@ export async function GET(request: Request) {
                width: '100%',
                height: '100%',
                objectFit: 'cover',
-               // Very subtle background to let text pop
-               opacity: 0.2 
+               // If score is showing -> Dim background (0.2)
+               // If NO score (Hero Mode) -> Full brightness (1.0)
+               opacity: hasScore ? 0.2 : 1.0 
              }}
            />
           )}
 
-          {/* TEXT CONTENT LAYER */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10,
-            textShadow: '0 4px 30px rgba(0,0,0,0.9)', 
-          }}>
-            
-            {/* TITLE */}
-            <div style={{ 
-              display: 'flex', 
-              fontSize: 80, 
-              color: 'white', 
-              marginBottom: 10, 
-              fontWeight: 900,
-              letterSpacing: '-2px',
-              textTransform: 'uppercase',
-              textShadow: '0 0 20px #855DCD'
+          {/* TEXT CONTENT LAYER - ONLY RENDER IF SCORE PARAM EXISTS */}
+          {hasScore && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10,
+              textShadow: '0 4px 30px rgba(0,0,0,0.9)', 
             }}>
-              Flappy Warplet
-            </div>
-            
-            {/* SUBTITLE */}
-            <div style={{ 
-              display: 'flex', 
-              fontSize: 32, 
-              color: '#a884f3', 
-              marginBottom: 10, 
-              letterSpacing: '8px',
-              textTransform: 'uppercase',
-              fontWeight: 700
-            }}>
-              GAME SCORE
-            </div>
+              
+              <div style={{ 
+                display: 'flex', 
+                fontSize: 80, 
+                color: 'white', 
+                marginBottom: 0, 
+                fontWeight: 900,
+                letterSpacing: '-2px',
+                textTransform: 'uppercase',
+                textShadow: '0 0 20px #855DCD'
+              }}>
+                Flappy Warplet
+              </div>
+              
+              <div style={{ 
+                display: 'flex', 
+                fontSize: 32, 
+                color: '#a884f3', 
+                marginBottom: 10, 
+                letterSpacing: '8px',
+                textTransform: 'uppercase',
+                fontWeight: 700
+              }}>
+                GAME SCORE
+              </div>
 
-            {/* DYNAMIC SCORE - Massive & Glowing */}
-            <div style={{ 
-              display: 'flex', 
-              fontSize: 220, 
-              fontWeight: 900, 
-              color: 'white',
-              textShadow: '0 0 80px #855DCD, 0 0 150px #855DCD',
-              marginTop: -10,
-              lineHeight: 1,
-            }}>
-              {score} ETH
+              <div style={{ 
+                display: 'flex', 
+                fontSize: 220, 
+                fontWeight: 900, 
+                color: 'white',
+                textShadow: '0 0 80px #855DCD, 0 0 150px #855DCD',
+                marginTop: -10,
+                lineHeight: 1,
+              }}>
+                {score} ETH
+              </div>
             </div>
-          </div>
+          )}
         </div>
       ),
       {
