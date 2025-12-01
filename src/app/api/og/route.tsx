@@ -68,7 +68,7 @@ export async function GET(request: Request) {
               textTransform: 'uppercase',
               textShadow: '0 0 20px #855DCD'
             }}>
-              WARP FLAP
+              Flappy Warplet
             </div>
             
             {/* SUBTITLE */}
