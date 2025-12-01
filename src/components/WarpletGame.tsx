@@ -17,8 +17,6 @@ const GAP_SIZE = 4.2;
 const VIEW_DISTANCE = 16;
 const PLAYER_X_OFFSET = -2;
 const CANDLE_WIDTH = 1.0;
-const PLAYER_SCALE = 1.5;     // Visual Size
-const PLAYER_HITBOX = 0.6;    // Collision Radius (Slightly smaller than visual for forgiveness)
 const INITIAL_X = 10;
 const TIP_ADDRESS = '0xa6DEe9FdE9E1203ad02228f00bF10235d9Ca3752';
 
@@ -45,7 +43,7 @@ function Player({ url, position, rotation }: { url: string; position: THREE.Vect
   return (
     <group ref={mesh}>
       <Billboard follow={true}>
-        <Image url={url} scale={[PLAYER_SCALE, PLAYER_SCALE]} transparent />
+        <Image url={url} scale={[1.5, 1.5]} transparent />
       </Billboard>
       <pointLight distance={4} intensity={3} color="#855DCD" />
     </group>
@@ -94,11 +92,15 @@ function GameScene({ imageUrl, gameState, setGameState, score, setScore }: any) 
   const velocity = useRef(0);
   const rotation = useRef(0);
 
-  const [candles, setCandles] = useState(() => [
-    { id: 1, x: INITIAL_X, gapY: 0, passed: false },
-    { id: 2, x: INITIAL_X + PIPE_SPACING, gapY: 1.5, passed: false },
-    { id: 3, x: INITIAL_X + PIPE_SPACING * 2, gapY: -1.5, passed: false }
-  ]);
+  // FIX: Increase buffer to 6 candles to cover the entire screen width + scrolling buffer
+  const [candles, setCandles] = useState(() => {
+    return Array.from({ length: 6 }).map((_, i) => ({
+      id: i + 1,
+      x: INITIAL_X + i * PIPE_SPACING,
+      gapY: (Math.random() - 0.5) * 4, // Randomize initial heights too
+      passed: false
+    }));
+  });
 
   const jump = () => {
     if (gameState === 'REKT') return;
@@ -135,8 +137,10 @@ function GameScene({ imageUrl, gameState, setGameState, score, setScore }: any) 
       return { ...c, x: newX };
     });
     
-    if (nextCandles[0].x < -15) {
+    // Recycle: Remove when off-screen (-12) to keep the buffer flowing
+    if (nextCandles[0].x < -12) {
       nextCandles.shift();
+      
       const lastCandle = nextCandles[nextCandles.length - 1];
       const nextX = lastCandle ? lastCandle.x + PIPE_SPACING : INITIAL_X;
       
@@ -151,37 +155,30 @@ function GameScene({ imageUrl, gameState, setGameState, score, setScore }: any) 
 
     if (playerPos.current.y < -9 || playerPos.current.y > 9) setGameState('REKT');
 
-    // IMPROVED COLLISION LOGIC
     nextCandles.forEach(c => {
-      // Check Horizontal Overlap (accounting for player width)
-      const dx = Math.abs(c.x - playerPos.current.x);
-      const collisionThresholdX = (CANDLE_WIDTH / 2) + PLAYER_HITBOX;
-      
-      if (dx < collisionThresholdX) {
-        // Check Vertical Overlap (Top Head or Bottom Feet hitting pipe)
-        const playerTop = playerPos.current.y + PLAYER_HITBOX;
-        const playerBottom = playerPos.current.y - PLAYER_HITBOX;
-        const gapTop = c.gapY + GAP_SIZE / 2;
-        const gapBottom = c.gapY - GAP_SIZE / 2;
-
-        // If Head hits top pipe OR Feet hits bottom pipe
-        if (playerTop > gapTop || playerBottom < gapBottom) {
+      if (Math.abs(c.x - playerPos.current.x) < (CANDLE_WIDTH / 2 + 0.3)) {
+        if (playerPos.current.y > c.gapY + GAP_SIZE / 2 || playerPos.current.y < c.gapY - GAP_SIZE / 2) {
            setGameState('REKT');
         }
       }
     });
   });
 
+  // Reset Logic
   useEffect(() => {
     if (gameState === 'START') {
       playerPos.current.set(PLAYER_X_OFFSET, 0, 0);
       velocity.current = 0;
       rotation.current = 0;
-      setCandles([
-        { id: 1, x: INITIAL_X, gapY: 0, passed: false },
-        { id: 2, x: INITIAL_X + PIPE_SPACING, gapY: 1.5, passed: false },
-        { id: 3, x: INITIAL_X + PIPE_SPACING * 2, gapY: -1.5, passed: false }
-      ]);
+      // Reset to 6 candles
+      setCandles(
+        Array.from({ length: 6 }).map((_, i) => ({
+          id: i + 1,
+          x: INITIAL_X + i * PIPE_SPACING,
+          gapY: (Math.random() - 0.5) * 4,
+          passed: false
+        }))
+      );
       setScore(0);
     }
   }, [gameState]);
